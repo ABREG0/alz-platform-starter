@@ -1,0 +1,40 @@
+{
+  "terraform_version": "1.12.2",
+  "branch_ref_override": "main",
+  "destroy_enabled": true,
+  "destroy_pause_in_seconds": 30,
+  "uses_component_version_tag_value": false,
+  "remote_state": {
+    "azure": {
+      "plan_container_name": "tfplan",
+      "resource_group_name": "rg-tfstate-shared",
+      "state_container_name": "tfstate",
+      "storage_account_name": "stb7q2znqmpox3hmix",
+      "storage_account_location": "centralus",
+      "subscription_id": "c5c1228d-b650-4f0a-97ea-1f8cfdc417c5"
+    }
+  },
+  "tfvars": {
+    "files": [],
+    "values": {}
+  },
+  "deployments": [
+    {
+      "name": "dev-vwan-connectivity",
+      "path": "terraform/environments/dev/vwan-connectivity",
+      "remote_state_key": "platform-alz-prod/dev-vwan-connectivity/terraform.tfstate",
+      "runner": "ubuntu-latest",
+      "run_order": 1,
+      "run_plan_only": false
+    },
+    {
+      "name": "dev-connectivity",
+      "path": "terraform/environments/dev/connectivity",
+      "remote_state_key": "platform-alz-prod/dev-connectivity/terraform.tfstate",
+      "runner": "ubuntu-latest",
+      "run_order": 2,
+      "run_plan_only": false
+    }
+  ],
+  "terraform_provider_network_mirror": "https://registry.terraform.io"
+}

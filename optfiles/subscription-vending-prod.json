@@ -1,0 +1,55 @@
+{
+  "terraform_version": "1.12.2",
+  "branch_ref_override": "main",
+  "destroy_enabled": false,
+  "destroy_pause_in_seconds": 30,
+  "uses_component_version_tag_value": false,
+  "metadata": {
+    "environment_name": "prod",
+    "caf_alignment_profile": "enterprise",
+    "waf_prioritized_pillars": [
+      "security",
+      "reliability",
+      "operational_excellence",
+      "cost_optimization",
+      "performance_efficiency"
+    ],
+    "subscription_vending_strategy": "avm-subscription-module",
+    "subscription_lifecycle_owner": "platform-team",
+    "subscription_move_policy": "create-only",
+    "target_management_group_id": "/providers/Microsoft.Management/managementGroups/alz-landingzones",
+    "avm_subscription_module_version": "0.2.1"
+  },
+  "remote_state": {
+    "azure": {
+      "plan_container_name": "tfplan",
+      "resource_group_name": "rg-tfstate-shared",
+      "state_container_name": "tfstate",
+      "storage_account_name": "stb7q2znqmpox3hmix",
+      "storage_account_location": "centralus",
+      "subscription_id": "c5c1228d-b650-4f0a-97ea-1f8cfdc417c5"
+    }
+  },
+  "tfvars": {
+    "files": [],
+    "values": {
+      "location": "eastus2",
+      "subscription_alias_enabled": false,
+      "existing_subscription_id": "c5c1228d-b650-4f0a-97ea-1f8cfdc417c5",
+      "subscription_management_group_association_enabled": true,
+      "subscription_management_group_id": "alz-landingzones",
+      "subscription_workload": "Production"
+    }
+  },
+  "deployments": [
+    {
+      "name": "prod-subscription-vending-inputs",
+      "path": "terraform/environments/prod/subscription-vending",
+      "remote_state_key": "platform-alz-prod/prod-subscription-vending-inputs/terraform.tfstate",
+      "runner": "ubuntu-latest",
+      "run_order": 1,
+      "run_plan_only": true
+    }
+  ],
+  "terraform_provider_network_mirror": "https://registry.terraform.io"
+}
