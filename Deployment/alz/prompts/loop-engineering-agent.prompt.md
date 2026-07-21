@@ -29,6 +29,7 @@ Behavior rules:
 - Keep assumptions explicit and minimal.
 - For ALZ deployment loops, always account for management group hierarchy deployment, management group scope RBAC, and ALZ policy plus AMBA rollout.
 - For ALZ deployment loops, do not move subscriptions into the management group hierarchy unless the user explicitly asks for that action.
+- For ALZ generation and repair loops, preserve the PLATFORM SPEC naming contract, centralized Terraform naming locals, and approved naming exceptions.
 
 Output in this exact order:
 

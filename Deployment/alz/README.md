@@ -9,6 +9,7 @@ For this prompt test, every generated artifact must stay inside `Deployment/alz`
 Use these files to:
 
 - collect the environment-specific values that the source markdown requires
+- collect one strict resource naming contract before any names are generated
 - generate ALZ environment artifacts into this folder instead of scattering them across the repo
 - execute the existing repo deployment path for the ALZ full multi-region stack
 
@@ -28,6 +29,7 @@ All ALZ prompt loops in this folder must include:
 - Role assignments at management group scope.
 - ALZ policy deployment plus AMBA onboarding/configuration.
 - No subscription moves into management groups unless explicitly requested.
+- CAF-aligned naming derived from the PLATFORM SPEC, with Azure constraints enforced and exact exceptions required for existing names.
 
 ## Current repo implementation anchor
 
@@ -39,7 +41,7 @@ This artifact pack is aligned to the existing working stack at:
 
 ## Important constraint
 
-Actual Azure deployment cannot be executed safely until `platform-spec.template.md` is filled with real tenant, subscription, backend, runner, and RBAC values, and the operator is authenticated to Azure.
+Actual Azure deployment cannot be executed safely until `platform-spec.template.md` is filled with real tenant, subscription, backend, runner, RBAC, and naming values, and the operator is authenticated to Azure.
 
 ## Expected output location
 
