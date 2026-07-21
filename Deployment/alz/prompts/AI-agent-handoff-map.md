@@ -32,11 +32,15 @@ Every ALZ run must include all of these unless user explicitly narrows scope:
 2. Role assignments at management group scope.
 3. ALZ policy deployment plus AMBA.
 4. No subscription moves into management groups unless explicitly requested.
+5. Resource names derived from the naming contract in PLATFORM SPEC.
+6. Azure resource-specific naming rules validated before generation or plan.
+7. No naming exception without an exact name and reason in PLATFORM SPEC.
 
 ## Suggested Run Order
 
 1. Fill ../network-security-routing-questionnaire.template.md.
-2. Fill ../platform-spec.template.md with finalized values.
-3. Run ../generate-alz-environment.prompt.md for deterministic artifact output.
-4. Run ../prompts/alz-merged-operator.prompt.md for preflight/validate/deploy loops.
-5. If a specific failure appears, switch to ../prompts/loop-engineering-agent.prompt.md until resolved.
+2. Fill ../platform-spec.template.md with finalized platform and naming values.
+3. Validate the naming contract and resolve or approve any exact existing-name exceptions.
+4. Run ../generate-alz-environment.prompt.md for deterministic artifact output.
+5. Run ../prompts/alz-merged-operator.prompt.md for preflight/validate/deploy loops.
+6. If a specific failure appears, switch to ../prompts/loop-engineering-agent.prompt.md until resolved.
