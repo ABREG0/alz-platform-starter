@@ -15,6 +15,11 @@ Stop if any of these are missing:
 - backend storage account and resource group
 - GitHub runner group and label
 - GitHub environment names
+- workload and environment naming codes
+- three-digit instance number and global uniqueness suffix
+- short codes for both regions
+- resource type abbreviations and resource-specific patterns
+- an explicit naming exception list
 
 ## 2. Generate the artifacts
 
@@ -40,6 +45,7 @@ Focus on:
 - backend authentication model
 - Terraform and provider versions
 - environment naming for plan/apply workflows
+- centralized naming locals, compliant computed names, and exact approved exceptions
 
 ## 4. Validate locally before promotion
 
@@ -50,6 +56,8 @@ terraform -chdir=terraform/environments/dev/alz-full-multi-region fmt -recursive
 terraform -chdir=terraform/environments/dev/alz-full-multi-region init -input=false -reconfigure
 terraform -chdir=terraform/environments/dev/alz-full-multi-region validate
 ```
+
+Before planning, confirm generated names are lowercase and contract-compliant; Storage, Key Vault, and ACR must also pass their tighter length, character, and global availability checks, or use a new suffix.
 
 If backend access is already configured, use the local wrapper for a safer environment-specific plan:
 

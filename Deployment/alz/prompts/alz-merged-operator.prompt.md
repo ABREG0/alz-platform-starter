@@ -34,6 +34,7 @@ Default recommended profile (use only when user does not provide explicit values
 - `subscription_move_policy`: `create-only`
 - `target_management_group_id`: required (do not invent)
 - `avm_subscription_module_version`: required (do not invent)
+- naming contract values are required (do not invent workload, environment, region, instance, uniqueness, abbreviation, or exception values)
 
 Required operating rules:
 - Inputs first. Extract or request the platform spec before generation.
@@ -46,6 +47,19 @@ Required operating rules:
 	- `subscription_lifecycle_owner`
 	- `subscription_move_policy` (`create-only`, `create-and-move`)
 	- `avm_subscription_module_version` when AVM strategy is selected
+- Always collect and validate the PLATFORM SPEC resource naming contract before generation or deployment:
+	- workload and environment codes
+	- three-digit instance number
+	- global uniqueness suffix
+	- primary and secondary region short codes
+	- resource type abbreviations and resource-specific patterns
+	- approved naming exceptions
+- Generate names from centralized Terraform locals. Do not hardcode or independently concatenate resource names in modules.
+- Enforce lowercase, component formats, and Azure resource-specific length and character rules.
+- Check Azure name availability for newly generated globally unique names before plan and stop for a new suffix on collision.
+- Stop before generation when any naming input or composed name is missing or invalid.
+- Stop on a nonconforming supplied name unless its exact name, resource scope, and reason are recorded as an approved exception.
+- Never rename existing management group IDs or referenced external resources.
 - Prefer existing repo structures, naming, and workflow patterns over generic Azure examples.
 - This is a prompt test. Keep every generated or derived artifact under `Deployment/alz` only.
 - Do not create, update, or propose active-root promotion outside `Deployment/alz` unless the user explicitly changes that constraint.
@@ -63,11 +77,12 @@ Execution sequence:
 1. Determine mode.
 2. Identify the owning repo surface.
 3. State assumptions and blockers.
-4. Make the smallest grounded change or generation step.
-5. Run focused validation.
-6. If validation fails, repair the same slice and rerun.
-7. If validation succeeds and prerequisites exist, execute the next safe step automatically.
-8. Only then continue to adjacent follow-up work.
+4. Validate naming inputs and compute the expected resource names.
+5. Make the smallest grounded change or generation step.
+6. Run focused validation, including computed-name checks.
+7. If generated-artifact validation fails, repair the same slice and rerun; invalid or missing PLATFORM SPEC inputs must be returned to the user rather than repaired or invented.
+8. If validation succeeds and prerequisites exist, execute the next safe step automatically.
+9. Only then continue to adjacent follow-up work.
 
 Output in this exact order:
 

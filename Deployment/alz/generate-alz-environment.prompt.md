@@ -15,6 +15,14 @@ Mandatory ALZ scope in generated output:
 - include ALZ policy deployment and AMBA deployment artifacts
 - do not move subscriptions into the management group hierarchy unless explicitly requested
 
+Mandatory naming behavior:
+- treat the `Resource naming` section of the PLATFORM SPEC as the naming contract
+- use its declared component order, resource type abbreviations, and resource-specific patterns for every newly generated Azure resource
+- validate all naming inputs and composed names before generating any file; if any are missing or invalid, stop and list them
+- stop on a nonconforming supplied name unless its exact value, resource scope, and reason appear in `Approved naming exceptions`
+- treat management group IDs and referenced existing resource names as immutable; never silently rename them
+- derive names once in Terraform locals and reuse those locals instead of rebuilding or hardcoding names in resources and modules
+
 This is a prompt test. Write every generated file under `./Deployment/alz/generated` and preserve this structure exactly.
 Do not create, update, or suggest promotion into `.github`, `scripts`, `terraform`, `optfiles`, or any other root outside `Deployment/alz`.
 After generation, continue automatically with validation and the next safe execution step inside `Deployment/alz` whenever the environment allows it.
@@ -26,6 +34,8 @@ Generate:
    - workflow_dispatch trigger, no inputs
    - OIDC login using azure/login@v3.0.0 with vars.AZURE_CLIENT_ID / AZURE_TENANT_ID
    - creates the state storage resource group and storage account
+   - uses the backend names from the spec exactly; validates each against the naming contract or an exact approved exception before creation
+   - checks storage account name availability when the account does not already exist and stops with a request for a new suffix on collision
    - creates blob containers: tfstate and tfplan
    - assigns Storage Blob Data Owner and Storage Account Contributor to the service principal on the storage resource group
    - runs on the runner group and label from the spec
@@ -46,6 +56,7 @@ Generate:
    - splits into plan and apply jobs
    - uses plan/apply environments from the spec
    - uploads plan as artifact and apply consumes that artifact
+   - runs preflight Azure availability checks for newly generated Storage, Key Vault, and ACR names before plan
 
 4. `./Deployment/alz/generated/.github/workflows/release.yml`
    - triggers on push to main
@@ -72,9 +83,12 @@ Generate:
 
 9. `./Deployment/alz/generated/terraform/spoke-unified/prod/variables.tf`
    - `default_subscription_id`
-   - `spoke_components` schema supporting `network`, `nsg`, and `route-table`
+   - typed naming inputs for workload, environment, instance, uniqueness suffix, region short codes, and resource type abbreviations
+   - validation blocks for naming component formats and Terraform check/precondition blocks for final composed names
+   - `spoke_components` schema supporting `network`, `nsg`, and `route-table` through semantic component keys, not generated-resource name strings
 
 10. `./Deployment/alz/generated/terraform/spoke-unified/prod/main.tf`
+    - centralized naming locals used by every generated resource and module
     - filters enabled spoke components by component type
     - calls modules for network, NSG, and route table components
 
@@ -85,6 +99,7 @@ Generate:
 15. `./Deployment/alz/generated/terraform/spoke-unified/prod/modules/spoke-route-table/main.tf`
 16. `./Deployment/alz/generated/terraform/spoke-unified/prod/modules/spoke-route-table/variables.tf`
 17. `./Deployment/alz/generated/terraform/spoke-unified/prod/tfvars/prod.tfvars`
+    - includes all naming contract values from the PLATFORM SPEC
 18. `./Deployment/alz/generated/terraform/environments/prod/alz-full-multi-region/main.tf`
    - includes ALZ management group hierarchy deployment
    - includes ALZ policy assignment deployment and AMBA onboarding
@@ -101,6 +116,7 @@ For each file:
 - do not abbreviate or omit sections
 - prefer repo conventions from `terraform/environments/dev/alz-full-multi-region`
 - keep authentication aligned with OIDC and Azure AD auth
+- do not emit ad hoc resource-name literals when a name can be derived from the naming contract
 
 After generating the files, output these sections in order:
 1. GENERATED_FILES
@@ -111,8 +127,10 @@ After generating the files, output these sections in order:
 
 Execution rule:
 - Run the smallest safe validation immediately after generating files.
+- Validate every computed resource name against the naming contract and the target Azure resource type rules before Terraform plan.
+- Check Azure name availability for newly generated globally unique names before plan; stop and request a new uniqueness suffix if a name is unavailable.
 - Check access before execution: Azure auth, GitHub permissions, required repo variables or secrets, and approval gates.
 - If access is missing, prompt the user for access or describe the exact missing prerequisite.
 - If Azure or GitHub execution is possible, continue automatically with prerequisite checks, bootstrap steps, script execution, and deployment-safe workflow or Terraform actions.
-- Stop only for missing access, secrets, approvals, or external service blockers.
+- After all required inputs and naming checks pass, stop only for missing access, secrets, approvals, or external service blockers.
 ```

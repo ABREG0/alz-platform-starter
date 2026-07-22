@@ -13,7 +13,7 @@ This guide answers two questions:
 ## How it works
 
 ```text
-You provide  →  a spec block with your decisions (names, IDs, roles, regions)
+You provide  →  a spec block with your decisions (naming contract, IDs, roles, regions)
 AI generates →  all workflow files, Terraform root, modules, bootstrap script, directory-config.json
 AI checks    →  Azure access, GitHub access, secrets, approvals, and required execution context
 AI validates →  generated files, Terraform shape, workflow shape, and prerequisite alignment
@@ -69,6 +69,32 @@ AzureRM provider version:           ~> 4.0
 Primary region: centralus
 Secondary region: southcentralus
 
+## Resource naming
+Naming convention: <resource-type>-<workload>-<environment>-<region>-<instance>
+Workload code: platform
+Environment code: prod
+Instance number: 001
+Global uniqueness suffix: b7q2
+Primary region short code: cus
+Secondary region short code: scus
+
+Resource type abbreviations:
+- Resource group: rg
+- Storage account: st
+- Key vault: kv
+- Container registry: cr
+- Virtual network: vnet
+- Subnet: snet
+- Network security group: nsg
+- Route table: rt
+- Log Analytics workspace: log
+
+Constrained global patterns: storage `st<workload><environment><suffix>`, Key Vault `kv-<workload>-<environment>-<suffix>`, and ACR `cr<workload><environment><suffix>`; if a name fails validation or availability, provide a new suffix.
+
+Approved naming exceptions:
+- rg-tfstate-shared (state backend subscription): existing backend resource group; preserve during reproduction
+- stb7q2znqmpox3hmix (rg-tfstate-shared): existing backend storage account; preserve during reproduction
+
 ## RBAC roles to assign on each spoke subscription
 - Contributor
 - Storage Blob Data Contributor
@@ -88,8 +114,13 @@ Paste your filled-in spec from Step 1, then add this prompt:
 Using the PLATFORM SPEC above as the only source of values, generate the following files
 for a new Azure Landing Zone IaC platform using Terraform and GitHub Actions.
 Do not invent values — use only what is in the spec.
+Treat the Resource naming section as a strict contract for every newly generated Azure resource.
+Derive names once in Terraform locals and reuse them. Before generating any file, validate all
+naming inputs and composed names against Azure naming rules; stop and list anything missing or
+invalid. Accept a nonconforming existing name only when its exact value, scope, and reason are
+listed under Approved naming exceptions. Never rename existing management group IDs or resources.
 After generation, validate the files and proceed automatically to the next safe execution step.
-Stop only when a required approval, missing secret, missing external permission, or unavailable tool blocks further progress.
+After required inputs and naming checks pass, stop only for a required approval, missing secret, missing external permission, or unavailable tool.
 
 Generate:
 
@@ -97,6 +128,8 @@ Generate:
    - workflow_dispatch trigger, no inputs
    - OIDC login using Azure/login@v2 with vars.AZURE_CLIENT_ID / AZURE_TENANT_ID
    - Creates the state storage resource group and storage account (RA-GRS, TLS 1.2, no shared keys, no public blob)
+   - Uses backend names from the spec exactly and validates each against the naming contract or an exact approved exception
+   - Checks storage account name availability before creation and requests a new suffix on collision
    - Creates blob containers: tfstate and tfplan
    - Assigns Storage Blob Data Owner and Storage Account Contributor to the service principal on the storage RG
    - Runs on the runner group and label from the spec
@@ -119,6 +152,7 @@ Generate:
    - Runs on the runner group and label from the spec
    - Uploads plan as artifact; apply downloads and executes it
    - Injects backend config from vars
+   - Runs preflight availability checks for newly generated Storage, Key Vault, and ACR names before plan
 
 4. `.github/workflows/release.yml`
    - Triggers on push to main
@@ -143,13 +177,16 @@ Generate:
 
 9. `terraform/spoke-unified/prod/variables.tf`
    - variable default_subscription_id
+   - typed naming inputs with component validation and Terraform checks/preconditions for composed names
    - variable spoke_components: map of objects supporting network, nsg, and route-table component types
-     with: enabled, component_type, subscription_id, location, resource_group_name, tags,
-     virtual_network_name, virtual_network_address_space, dns_servers, subnets map,
-     nsg_name, nsg_names map, security_rules list, nsg_subnet_associations list,
-     route_table_name, bgp_route_propagation_enabled, routes list, route_table_subnet_associations list
+     with: enabled, component_type, subscription_id, location, tags,
+     virtual_network_address_space, dns_servers, subnets map,
+     security_rules list, nsg_subnet_associations list,
+     bgp_route_propagation_enabled, routes list, route_table_subnet_associations list
+   - use semantic map keys for generated components; do not accept generated-resource names in tfvars
 
 10. `terraform/spoke-unified/prod/main.tf`
+    - centralized naming locals used by every generated resource and module
     - locals to filter spoke_components by component_type and enabled flag
     - module "spoke_network" for_each over network components
     - module "spoke_nsg" for_each over nsg components
@@ -160,7 +197,7 @@ Generate:
     - azurerm_subnet resource for_each over var.subnets
 
 12. `terraform/spoke-unified/prod/modules/spoke-nsg/main.tf` and `variables.tf`
-    - supports nsg_names map (one NSG per subnet key) or falls back to single nsg_name
+    - receives computed NSG names from root naming locals, one per semantic subnet key
     - azurerm_network_security_group for_each
     - azurerm_network_security_rule for_each over security_rules cross-joined with NSGs
     - data azurerm_subnet lookup and azurerm_subnet_network_security_group_association
@@ -171,6 +208,7 @@ Generate:
     - data azurerm_subnet lookup and azurerm_subnet_route_table_association
 
 14. `terraform/spoke-unified/prod/tfvars/prod.tfvars`
+    - Naming contract values from the spec
     - One example enabled network component and one disabled placeholder showing the full schema
 
 For each file, output the complete file content. Do not abbreviate or use placeholders
@@ -179,16 +217,17 @@ like "# ... rest of file". Every file must be complete and immediately usable.
 After generating the files, the AI must also:
 
 1. Validate the generated Terraform and workflow structure.
-2. Check whether Azure access, GitHub access, required secrets, and approval paths are available.
-3. If access is missing, ask the user for the missing access or state exactly what must be configured.
-4. Create or stage the files in the target folder.
-5. Run the smallest safe validation commands immediately.
-6. If GitHub or Azure execution is available, proceed with:
+2. Validate every computed resource name against the naming contract and Azure resource-specific rules.
+3. Check whether Azure access, GitHub access, required secrets, and approval paths are available.
+4. If access is missing, ask the user for the missing access or state exactly what must be configured.
+5. Create or stage the files in the target folder.
+6. Run the smallest safe validation commands immediately.
+7. If GitHub or Azure execution is available, proceed with:
    - OIDC and backend prerequisite checks
    - federated credential and RBAC setup
    - bootstrap workflow or equivalent backend creation step
    - Terraform plan or deployment workflow dispatch
-7. Report only the blockers that require human action.
+8. Report only the blockers that require human action.
 ```
 
 ---
@@ -217,7 +256,7 @@ Before any execution step, the AI should check and report:
 
 If one of those is missing, the AI should prompt the user for the missing access or provide the exact configuration action needed before continuing.
 
-The AI should stop only for real external blockers such as:
+After required inputs and naming checks pass, the AI should stop only for real external blockers such as:
 
 - missing Azure authentication
 - missing GitHub permissions

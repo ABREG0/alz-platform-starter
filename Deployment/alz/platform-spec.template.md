@@ -1,6 +1,6 @@
 # PLATFORM SPEC
 
-Fill in this file before generating or deploying an Azure Landing Zone environment.
+Fill in every section of this file, including Resource naming, before generating or deploying an Azure Landing Zone environment.
 
 Do not leave placeholder values for any field that identifies Azure tenant, subscriptions, backend resources, GitHub runner placement, or approval boundaries.
 
@@ -71,6 +71,31 @@ AzureRM provider version: ~> 4.21
 Primary region: <primary-region>
 Secondary region: <secondary-region>
 
+## Resource naming
+Naming convention: <resource-type>-<workload>-<environment>-<region>-<instance>
+Workload code: <2-8-lowercase-alphanumeric>
+Environment code: <2-4-lowercase-alphanumeric>
+Instance number: <three-digits>
+Global uniqueness suffix: <4-6-lowercase-alphanumeric>
+Primary region short code: <2-4-lowercase-alphanumeric>
+Secondary region short code: <2-4-lowercase-alphanumeric>
+
+Resource type abbreviations:
+- Resource group: rg
+- Storage account: st
+- Key vault: kv
+- Container registry: cr
+- Virtual network: vnet
+- Subnet: snet
+- Network security group: nsg
+- Route table: rt
+- Log Analytics workspace: log
+
+Constrained global patterns: storage `st<workload><environment><suffix>`, Key Vault `kv-<workload>-<environment>-<suffix>`, and ACR `cr<workload><environment><suffix>`.
+
+Approved naming exceptions:
+- none
+
 ## RBAC roles to assign on each spoke subscription
 - Contributor
 - Storage Blob Data Contributor
@@ -88,3 +113,6 @@ Use [network-security-routing-questionnaire.template.md](./network-security-rout
 - `Management`, `Connectivity`, `Identity`, and `Security` map to the `subscription_ids` object used by [../../terraform/environments/dev/alz-full-multi-region/variables.tf](../../terraform/environments/dev/alz-full-multi-region/variables.tf).
 - `Primary region` and `Secondary region` map to `starter_locations` in the ALZ full multi-region stack.
 - Backend values must align with the remote state settings used by the deployment workflow or local wrapper script.
+- Derive lowercase names once in Terraform locals using the declared inputs; never invent region codes, hardcode generated names, or rename an existing resource unless its exact name, scope, and reason are listed under `Approved naming exceptions`.
+- Follow the [Cloud Adoption Framework naming guidance](https://learn.microsoft.com/azure/cloud-adoption-framework/ready/azure-best-practices/resource-naming) and [abbreviations](https://learn.microsoft.com/azure/cloud-adoption-framework/ready/azure-best-practices/resource-abbreviations), then validate each composed name against the [Azure resource naming rules](https://learn.microsoft.com/azure/azure-resource-manager/management/resource-name-rules).
+- Storage, Key Vault, and ACR use globally unique namespaces and tighter character or length boundaries; if validation or availability fails, stop and request a new suffix.
