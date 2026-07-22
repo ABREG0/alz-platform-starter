@@ -2,6 +2,8 @@
 
 This runbook is the execution path after the ALZ artifacts are generated under `./Deployment/alz/generated`.
 
+For a visual high-level map of what the prompts generate and deploy, open [alz-prompt-deployment-route-explorer.html](./alz-prompt-deployment-route-explorer.html) first.
+
 ## 1. Fill the spec
 
 Complete [platform-spec.template.md](./platform-spec.template.md).

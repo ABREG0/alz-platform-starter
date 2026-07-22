@@ -1,0 +1,773 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ALZ Prompt Deployment Route Explorer</title>
+  <style>
+    :root {
+      --bg: #0c111b;
+      --panel: #121a2a;
+      --panel-2: #1a2438;
+      --ink: #e9edf6;
+      --muted: #9aa7bf;
+      --line: #2d3a55;
+      --accent: #33c8ff;
+      --ok: #36d08c;
+      --warn: #ffcc4d;
+      --risk: #ff7070;
+      --intent: #5aa5ff;
+      --gen: #7fe2ad;
+      --val: #ffd56b;
+      --dep: #7cc3ff;
+      --gov: #ff9f6b;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", "Calibri", "Trebuchet MS", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 12% 10%, #15233d 0%, transparent 30%),
+        radial-gradient(circle at 92% 12%, #183a33 0%, transparent 26%),
+        linear-gradient(120deg, #090d16, #121a2a 45%, #0f1725);
+      min-height: 100vh;
+    }
+
+    .topbar {
+      border-bottom: 1px solid var(--line);
+      background: rgba(10, 16, 28, 0.92);
+      backdrop-filter: blur(6px);
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .title {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .title h1 {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: 0.3px;
+    }
+
+    .title p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .badge {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 6px 10px;
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 300px 1fr 360px;
+      gap: 12px;
+      padding: 12px;
+    }
+
+    .panel {
+      background: rgba(14, 21, 35, 0.9);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+      min-height: calc(100vh - 92px);
+    }
+
+    .panel h2 {
+      margin: 0;
+      padding: 14px 14px 10px;
+      border-bottom: 1px solid var(--line);
+      font-size: 15px;
+    }
+
+    .side-content {
+      padding: 12px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .route-btn {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #142039;
+      color: var(--ink);
+      text-align: left;
+      padding: 10px;
+      cursor: pointer;
+      transition: 130ms ease;
+    }
+
+    .route-btn:hover,
+    .route-btn.active {
+      border-color: var(--accent);
+      background: #182946;
+      transform: translateY(-1px);
+      box-shadow: 0 0 0 1px rgba(51, 200, 255, 0.2) inset;
+    }
+
+    .route-btn small {
+      display: block;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .map-wrap {
+      background:
+        linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        #0b111d;
+      background-size: 28px 28px, 28px 28px, auto;
+      padding: 14px;
+      overflow: auto;
+    }
+
+    .lanes {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(220px, 1fr));
+      gap: 12px;
+      min-width: 1160px;
+    }
+
+    .lane {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: linear-gradient(180deg, rgba(20, 31, 51, 0.95), rgba(13, 19, 32, 0.95));
+      overflow: hidden;
+    }
+
+    .lane h3 {
+      margin: 0;
+      padding: 10px;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      border-bottom: 1px solid var(--line);
+      color: #d7e4fb;
+    }
+
+    .lane.intent h3 { background: rgba(90, 165, 255, 0.14); }
+    .lane.generate h3 { background: rgba(127, 226, 173, 0.12); }
+    .lane.validate h3 { background: rgba(255, 213, 107, 0.13); }
+    .lane.deploy h3 { background: rgba(124, 195, 255, 0.13); }
+    .lane.govern h3 { background: rgba(255, 159, 107, 0.13); }
+
+    .cards {
+      padding: 10px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .card {
+      border: 1px solid #32507d;
+      border-radius: 10px;
+      background: #10203a;
+      padding: 10px;
+      cursor: pointer;
+      transition: 120ms ease;
+    }
+
+    .card:hover,
+    .card.active {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(51, 200, 255, 0.35) inset;
+      transform: translateY(-1px);
+    }
+
+    .card h4 {
+      margin: 0 0 4px;
+      font-size: 13px;
+    }
+
+    .card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .pill {
+      display: inline-block;
+      margin-top: 8px;
+      border: 1px solid #345d99;
+      border-radius: 999px;
+      padding: 3px 8px;
+      font-size: 10px;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      color: #c8dcff;
+    }
+
+    .detail {
+      padding: 12px;
+      display: grid;
+      gap: 10px;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .detail-card {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #121d33;
+      padding: 10px;
+    }
+
+    .detail-card h4 {
+      margin: 0 0 6px;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: #dbe6fb;
+    }
+
+    ul {
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    code {
+      color: #c6f4ff;
+      background: rgba(51, 200, 255, 0.13);
+      border: 1px solid rgba(51, 200, 255, 0.22);
+      padding: 1px 4px;
+      border-radius: 5px;
+      font-size: 12px;
+    }
+
+    .kpi {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .kpi > div {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px;
+      background: #0f1a2e;
+    }
+
+    .kpi strong {
+      display: block;
+      font-size: 16px;
+      margin-bottom: 2px;
+    }
+
+    .muted { color: var(--muted); }
+
+    @media (max-width: 1300px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .panel {
+        min-height: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="title">
+      <h1>ALZ Prompt Deployment Route Explorer</h1>
+      <p>High-level design for what this prompt system generates, validates, and deploys</p>
+    </div>
+    <div class="badge">Repository: ABREG0/alz-platform-starter</div>
+  </header>
+
+  <main class="layout">
+    <section class="panel">
+      <h2>Route Selection</h2>
+      <div class="side-content">
+        <button class="route-btn active" data-route="full-path">
+          Full ALZ Platform Path
+          <small>Spec -> Generation -> Validation -> Deploy -> Governance checks</small>
+        </button>
+        <button class="route-btn" data-route="staging-only">
+          Prompt Test Staging Path
+          <small>Generate only under Deployment/alz/generated with no promotion</small>
+        </button>
+        <button class="route-btn" data-route="troubleshoot">
+          Validation & Troubleshoot Path
+          <small>Use validation and workflow diagnostics before deploy</small>
+        </button>
+        <div class="detail-card">
+          <h4>Source Prompts</h4>
+          <ul>
+            <li><code>Deployment/alz/platform-spec.template.md</code></li>
+            <li><code>Deployment/alz/generate-alz-environment.prompt.md</code></li>
+            <li><code>Deployment/alz/deploy-runbook.md</code></li>
+            <li><code>prompts/master-operator-prompt.md</code></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel map-wrap">
+      <div class="lanes">
+        <article class="lane intent">
+          <h3>1. Intent & Inputs</h3>
+          <div class="cards">
+            <div class="card active" data-node="spec">
+              <h4>PLATFORM SPEC Intake</h4>
+              <p>Tenant, subscriptions, backend, runner, environments, Terraform versions, regions, RBAC roles.</p>
+              <span class="pill">Input Gate</span>
+            </div>
+            <div class="card" data-node="scope">
+              <h4>Scope Guardrails</h4>
+              <p>Require management group hierarchy, MG-scope RBAC, ALZ policy, and AMBA onboarding artifacts.</p>
+              <span class="pill">Safety</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="lane generate">
+          <h3>2. Artifact Generation</h3>
+          <div class="cards">
+            <div class="card" data-node="workflows">
+              <h4>GitHub Workflows</h4>
+              <p>Bootstrap, PR validate, terraform deploy, and release workflow files generated from spec.</p>
+              <span class="pill">CI/CD</span>
+            </div>
+            <div class="card" data-node="terraform">
+              <h4>Terraform Structure</h4>
+              <p>Spoke-unified modules and ALZ environment root scaffolding with OIDC-ready backend model.</p>
+              <span class="pill">IaC</span>
+            </div>
+            <div class="card" data-node="scripts">
+              <h4>Bootstrap Scripts</h4>
+              <p>Federated credentials and RBAC setup scripts for subscription and management group scopes.</p>
+              <span class="pill">Identity</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="lane validate">
+          <h3>3. Validate & Align</h3>
+          <div class="cards">
+            <div class="card" data-node="local-validate">
+              <h4>Local Validation</h4>
+              <p>Run fmt, init, validate, and plan shape checks before any promotion or live deployment action.</p>
+              <span class="pill">Quality Gate</span>
+            </div>
+            <div class="card" data-node="anchor-compare">
+              <h4>Repo Anchor Comparison</h4>
+              <p>Compare generated outputs with the known-good alz-full-multi-region implementation in repo.</p>
+              <span class="pill">Parity</span>
+            </div>
+            <div class="card" data-node="pre-req">
+              <h4>Access Prerequisites</h4>
+              <p>Confirm Azure auth, GitHub access, repo vars, approvals, and runner availability.</p>
+              <span class="pill">Readiness</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="lane deploy">
+          <h3>4. Deploy Path</h3>
+          <div class="cards">
+            <div class="card" data-node="bootstrap">
+              <h4>Backend Bootstrap</h4>
+              <p>Create/verify tfstate resources and assign storage roles through OIDC identity.</p>
+              <span class="pill">Foundation</span>
+            </div>
+            <div class="card" data-node="plan-apply">
+              <h4>Plan & Apply</h4>
+              <p>Plan in plan environment, apply in protected apply environment with manual approval gate.</p>
+              <span class="pill">Controlled Deploy</span>
+            </div>
+            <div class="card" data-node="post-validate">
+              <h4>Post-Deployment Verification</h4>
+              <p>Validate DNS zones and links, policy/AMBA status, and Terraform state alignment.</p>
+              <span class="pill">Evidence</span>
+            </div>
+          </div>
+        </article>
+
+        <article class="lane govern">
+          <h3>5. Governance & Boundaries</h3>
+          <div class="cards">
+            <div class="card" data-node="staging-boundary">
+              <h4>Prompt-Test Boundary</h4>
+              <p>All generated files stay inside Deployment/alz/generated unless explicit promotion is approved.</p>
+              <span class="pill">Boundary</span>
+            </div>
+            <div class="card" data-node="stop-gates">
+              <h4>Stop Gates</h4>
+              <p>Missing required inputs, validation failures, destroy without approval, or missing access.</p>
+              <span class="pill">Risk Control</span>
+            </div>
+            <div class="card" data-node="outputs">
+              <h4>Operational Outputs</h4>
+              <p>Generated files list, assumptions, automatic actions, validation commands, and staging notes.</p>
+              <span class="pill">Handoff</span>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Node Detail</h2>
+      <div class="detail">
+        <div class="detail-card">
+          <h4 id="detail-title">PLATFORM SPEC Intake</h4>
+          <p id="detail-summary">The deployment blueprint starts with the platform spec template. The prompts are designed to stop if any required value is missing.</p>
+        </div>
+
+        <div class="detail-card">
+          <h4>What This Stage Produces</h4>
+          <ul id="detail-produces">
+            <li>Complete environment value set for deterministic generation.</li>
+            <li>Input validation boundary before any file generation.</li>
+            <li>Traceable design intent for audit and handoff.</li>
+          </ul>
+        </div>
+
+        <div class="detail-card">
+          <h4>Primary Files</h4>
+          <ul id="detail-files">
+            <li><code>Deployment/alz/platform-spec.template.md</code></li>
+            <li><code>Deployment/alz/generate-alz-environment.prompt.md</code></li>
+          </ul>
+        </div>
+
+        <div class="detail-card kpi">
+          <div>
+            <strong id="kpi-artifacts">20+</strong>
+            <span class="muted">Artifacts Generated</span>
+          </div>
+          <div>
+            <strong id="kpi-gates">7</strong>
+            <span class="muted">Core Safety Gates</span>
+          </div>
+          <div>
+            <strong id="kpi-mode">Deploy</strong>
+            <span class="muted">Primary Route Mode</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const nodes = {
+      "spec": {
+        title: "PLATFORM SPEC Intake",
+        summary: "The deployment blueprint starts with the platform spec template. The prompts are designed to stop if any required value is missing.",
+        produces: [
+          "Complete environment value set for deterministic generation.",
+          "Input validation boundary before any file generation.",
+          "Traceable design intent for audit and handoff."
+        ],
+        files: [
+          "Deployment/alz/platform-spec.template.md",
+          "Deployment/alz/generate-alz-environment.prompt.md"
+        ],
+        artifacts: "20+",
+        gates: "7",
+        mode: "Deploy"
+      },
+      "scope": {
+        title: "Scope Guardrails",
+        summary: "Generated output must include management hierarchy, MG-scope RBAC, ALZ policies, and AMBA. Subscription moves are blocked unless explicitly requested.",
+        produces: [
+          "Consistent ALZ governance baseline in generated artifacts.",
+          "Reduced accidental scope drift during AI generation.",
+          "Clear non-negotiable constraints before execution."
+        ],
+        files: [
+          "Deployment/alz/generate-alz-environment.prompt.md",
+          "prompts/master-operator-prompt.md"
+        ],
+        artifacts: "Policy + AMBA",
+        gates: "Hard",
+        mode: "Deploy"
+      },
+      "workflows": {
+        title: "GitHub Workflows",
+        summary: "The prompts generate bootstrap, PR validate, deploy, and release workflows to operationalize safe CI/CD for ALZ changes.",
+        produces: [
+          "Bootstrap pipeline for backend prerequisites.",
+          "Pull-request validation matrix based on changed directories.",
+          "Controlled plan/apply split deployment workflow."
+        ],
+        files: [
+          "Deployment/alz/generated/.github/workflows/Bootstrap.yaml",
+          "Deployment/alz/generated/.github/workflows/pr-validate.yml",
+          "Deployment/alz/generated/.github/workflows/terraform-deploy.yml",
+          "Deployment/alz/generated/.github/workflows/release.yml"
+        ],
+        artifacts: "4",
+        gates: "Env + OIDC",
+        mode: "Deploy"
+      },
+      "terraform": {
+        title: "Terraform Structure",
+        summary: "Spoke-unified modules plus ALZ environment root files are generated with backend and provider alignment from spec values.",
+        produces: [
+          "Reusable modules for network, NSG, and route table components.",
+          "Environment root for full ALZ multi-region deployment shape.",
+          "Directory config for matrix routing."
+        ],
+        files: [
+          "Deployment/alz/generated/terraform/directory-config.json",
+          "Deployment/alz/generated/terraform/spoke-unified/prod/main.tf",
+          "Deployment/alz/generated/terraform/environments/prod/alz-full-multi-region/main.tf"
+        ],
+        artifacts: "12+",
+        gates: "Schema",
+        mode: "Deploy"
+      },
+      "scripts": {
+        title: "Bootstrap Scripts",
+        summary: "Identity scripts set up federated credentials and RBAC scopes needed for GitHub OIDC workflow execution.",
+        produces: [
+          "Subscription-scope role assignments for service principal.",
+          "Management-group role assignments for ALZ control plane.",
+          "Automatable RBAC bootstrap path from prompt outputs."
+        ],
+        files: [
+          "Deployment/alz/generated/scripts/setup-federated-creds-and-rbac.ps1",
+          "Deployment/alz/generated/scripts/setup-mg-scope-rbac.ps1"
+        ],
+        artifacts: "2",
+        gates: "RBAC",
+        mode: "Deploy"
+      },
+      "local-validate": {
+        title: "Local Validation",
+        summary: "Before promotion or execution, local Terraform checks validate formatting, init shape, and configuration integrity.",
+        produces: [
+          "fmt compliance and early syntax validation.",
+          "Provider and module wiring confidence.",
+          "Early failure detection before workflow runs."
+        ],
+        files: [
+          "Deployment/alz/deploy-runbook.md"
+        ],
+        artifacts: "Validation Logs",
+        gates: "fmt/init/validate",
+        mode: "Validate"
+      },
+      "anchor-compare": {
+        title: "Repo Anchor Comparison",
+        summary: "Generated outputs are checked against the repository's known-good ALZ implementation to preserve parity and conventions.",
+        produces: [
+          "Version and backend auth alignment.",
+          "Naming and subscription mapping consistency.",
+          "Reduced divergence risk from production pattern."
+        ],
+        files: [
+          "terraform/environments/dev/alz-full-multi-region/main.tf",
+          "terraform/environments/dev/alz-full-multi-region/variables.tf",
+          "terraform/environments/dev/alz-full-multi-region/run-platform-alz-prod.ps1"
+        ],
+        artifacts: "Parity Review",
+        gates: "Convention",
+        mode: "Validate"
+      },
+      "pre-req": {
+        title: "Access Prerequisites",
+        summary: "The deployment route checks Azure auth, GitHub permissions, variables/secrets, and environment approval gates before any live execution.",
+        produces: [
+          "Explicit blocker list when external access is missing.",
+          "Pre-flight readiness status before dispatch.",
+          "Deterministic next action for operator handoff."
+        ],
+        files: [
+          "Deployment/alz/generate-alz-environment.prompt.md",
+          "Deployment/alz/deploy-runbook.md"
+        ],
+        artifacts: "Readiness Report",
+        gates: "Access",
+        mode: "Validate"
+      },
+      "bootstrap": {
+        title: "Backend Bootstrap",
+        summary: "Bootstrap workflow or equivalent step creates and configures state storage and required role assignments for Terraform execution.",
+        produces: [
+          "Storage account and containers for tfstate/tfplan.",
+          "OIDC-based access for workflow identity.",
+          "Operational backend baseline for plans and applies."
+        ],
+        files: [
+          "Deployment/alz/generated/.github/workflows/Bootstrap.yaml"
+        ],
+        artifacts: "State Backend",
+        gates: "OIDC + RBAC",
+        mode: "Deploy"
+      },
+      "plan-apply": {
+        title: "Plan & Apply",
+        summary: "Deploy workflow enforces main branch, computes directory targets, and separates plan from apply with protected apply environment approvals.",
+        produces: [
+          "Plan artifact with reproducible apply input.",
+          "Approval-gated apply execution path.",
+          "Release-tag-based deployment traceability."
+        ],
+        files: [
+          "Deployment/alz/generated/.github/workflows/terraform-deploy.yml"
+        ],
+        artifacts: "Plan + Apply",
+        gates: "Manual Approval",
+        mode: "Deploy"
+      },
+      "post-validate": {
+        title: "Post-Deployment Verification",
+        summary: "After apply, validation focuses on policy, DNS link health, and expected ALZ artifacts to prove platform integrity.",
+        produces: [
+          "Evidence of successful route completion.",
+          "Detection of DNS and policy drift.",
+          "Handoff-ready deployment status summary."
+        ],
+        files: [
+          "scripts/smoke-check.ps1",
+          "scripts/validate-deployment.ps1"
+        ],
+        artifacts: "Evidence Pack",
+        gates: "Quality",
+        mode: "Validate"
+      },
+      "staging-boundary": {
+        title: "Prompt-Test Boundary",
+        summary: "For prompt-test mode, all generated artifacts remain under Deployment/alz/generated with no automatic promotion into active repo roots.",
+        produces: [
+          "Safe sandbox for generated outputs.",
+          "No accidental modifications to production roots.",
+          "Clear transition point for manual promotion decisions."
+        ],
+        files: [
+          "Deployment/alz/README.md",
+          "Deployment/alz/deploy-runbook.md"
+        ],
+        artifacts: "Sandbox",
+        gates: "Boundary",
+        mode: "Staging"
+      },
+      "stop-gates": {
+        title: "Stop Gates",
+        summary: "The route halts on missing required inputs, failed validation, unauthorized destroy actions, or missing external access and approvals.",
+        produces: [
+          "Preventive controls before risky actions.",
+          "Deterministic stop conditions for operators.",
+          "Actionable blocker feedback instead of partial execution."
+        ],
+        files: [
+          "prompts/master-operator-prompt.md",
+          "Deployment/alz/generate-alz-environment.prompt.md"
+        ],
+        artifacts: "Blocker Report",
+        gates: "Strict",
+        mode: "Troubleshoot"
+      },
+      "outputs": {
+        title: "Operational Outputs",
+        summary: "Final output contract includes generated files, assumptions, automatic actions, validation commands, and staging notes for handoff.",
+        produces: [
+          "Human-readable deployment evidence.",
+          "Repeatable audit trail across sessions.",
+          "Operator-ready next steps and remaining blockers."
+        ],
+        files: [
+          "Deployment/alz/generate-alz-environment.prompt.md",
+          "prompts/README.md"
+        ],
+        artifacts: "Run Summary",
+        gates: "Reporting",
+        mode: "Handoff"
+      }
+    };
+
+    const routes = {
+      "full-path": ["spec", "scope", "workflows", "terraform", "scripts", "local-validate", "anchor-compare", "pre-req", "bootstrap", "plan-apply", "post-validate", "stop-gates", "outputs"],
+      "staging-only": ["spec", "scope", "workflows", "terraform", "scripts", "local-validate", "staging-boundary", "stop-gates", "outputs"],
+      "troubleshoot": ["pre-req", "local-validate", "anchor-compare", "stop-gates", "outputs"]
+    };
+
+    const cards = Array.from(document.querySelectorAll(".card"));
+    const routeButtons = Array.from(document.querySelectorAll(".route-btn"));
+
+    function setNode(nodeKey) {
+      const data = nodes[nodeKey];
+      if (!data) return;
+
+      document.getElementById("detail-title").textContent = data.title;
+      document.getElementById("detail-summary").textContent = data.summary;
+      document.getElementById("kpi-artifacts").textContent = data.artifacts;
+      document.getElementById("kpi-gates").textContent = data.gates;
+      document.getElementById("kpi-mode").textContent = data.mode;
+
+      const produces = document.getElementById("detail-produces");
+      produces.innerHTML = "";
+      data.produces.forEach(item => {
+        const li = document.createElement("li");
+        li.textContent = item;
+        produces.appendChild(li);
+      });
+
+      const files = document.getElementById("detail-files");
+      files.innerHTML = "";
+      data.files.forEach(item => {
+        const li = document.createElement("li");
+        const code = document.createElement("code");
+        code.textContent = item;
+        li.appendChild(code);
+        files.appendChild(li);
+      });
+    }
+
+    function activateRoute(routeKey) {
+      const routeSet = new Set(routes[routeKey] || []);
+
+      routeButtons.forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.route === routeKey);
+      });
+
+      cards.forEach(card => {
+        const isInRoute = routeSet.has(card.dataset.node);
+        card.style.opacity = isInRoute ? "1" : "0.28";
+        card.style.filter = isInRoute ? "none" : "grayscale(35%)";
+      });
+
+      const firstNode = (routes[routeKey] && routes[routeKey][0]) || "spec";
+      cards.forEach(c => c.classList.toggle("active", c.dataset.node === firstNode));
+      setNode(firstNode);
+    }
+
+    cards.forEach(card => {
+      card.addEventListener("click", () => {
+        cards.forEach(c => c.classList.remove("active"));
+        card.classList.add("active");
+        setNode(card.dataset.node);
+      });
+    });
+
+    routeButtons.forEach(btn => {
+      btn.addEventListener("click", () => activateRoute(btn.dataset.route));
+    });
+
+    activateRoute("full-path");
+  </script>
+</body>
+</html>

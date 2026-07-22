@@ -12,6 +12,12 @@ Use these files to:
 - generate ALZ environment artifacts into this folder instead of scattering them across the repo
 - execute the existing repo deployment path for the ALZ full multi-region stack
 
+## High-level design map
+
+Open the interactive design document to visualize what the prompts generate and how the deployment path flows across inputs, generation, validation, deployment, and governance gates:
+
+- [alz-prompt-deployment-route-explorer.html](./alz-prompt-deployment-route-explorer.html)
+
 ## Contents
 
 - [platform-spec.template.md](./platform-spec.template.md): fill-in template for the required environment values
